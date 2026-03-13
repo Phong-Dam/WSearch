@@ -85,5 +85,5 @@ IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMA
 
 ---
 
-**Author**: [Phong-Dam](https://github.com/Phong-Dam)
+**Author**: [Phong-Dam](https://github.com/Phong-Dam)  
 **Purpose**: Learning desktop app development, Windows API, and Rust programming

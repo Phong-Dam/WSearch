@@ -85,5 +85,5 @@ TRONG BẤT KỲ TRƯỜNG HỢP NÀO, TÁC GIẢ HOẶC CHỦ SỞ HỮU BẢN 
 
 ---
 
-**Tác giả**: Dự án nghiên cứu được phát triển với Tauri và Rust  
+**Tác giả**: [Phong-Dam](https://github.com/Phong-Dam)  
 **Mục đích**: Học tập về desktop app development, Windows API, và Rust programming
