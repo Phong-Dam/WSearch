@@ -1,63 +1,65 @@
 # WSearch
 
-> **⚠️ CẢNH BÁO: DỰ ÁN NGHIÊN CỨU**  
-> Ứng dụng này được phát triển **CHỈ VÌ MỤC ĐÍCH NGHIÊN CỨU VÀ HỌC TẬP**.  
-> **KHÔNG SỬ DỤNG** trong môi trường sản xuất hoặc cho mục đích thương mại.  
-> Tác giả không chịu trách nhiệm về bất kỳ thiệt hại nào phát sinh từ việc sử dụng phần mềm này.
+**English** | **[Tiếng Việt](README.vi.md)**
 
-Một ứng dụng tìm kiếm file nhanh và hiệu quả cho Windows.
+> **⚠️ WARNING: RESEARCH PROJECT**  
+> This application is developed **FOR RESEARCH AND EDUCATIONAL PURPOSES ONLY**.  
+> **DO NOT USE** in production environments or for commercial purposes.  
+> The author assumes no responsibility for any damage arising from the use of this software.
 
-## Về WSearch
+A fast and efficient desktop file search application for Windows built with Tauri and Rust.
 
-WSearch là một công cụ tìm kiếm file desktop được thiết kế để giúp bạn nhanh chóng tìm thấy các file và thư mục trên máy tính của mình. Với giao diện trực quan và khả năng tìm kiếm nhanh, WSearch giúp bạn tiết kiệm thời gian khi cần tìm file.
+## About
 
-**Lưu ý:** Đây là dự án thử nghiệm nhằm mục đích học tập về Tauri, Rust, và Windows API. Code có thể chứa lỗi, thiếu tính năng bảo mật, hoặc không được tối ưu hóa đầy đủ.
+WSearch is a desktop file search tool designed to help you quickly find files and folders on your computer. With an intuitive interface and fast search capabilities, WSearch saves you time when you need to find files.
 
-## Tính năng chính
+**Note:** This is an experimental project for learning purposes about Tauri, Rust, and Windows API. The code may contain bugs, lack security features, or not be fully optimized.
 
-- **Tìm kiếm nhanh**: Tìm kiếm file và thư mục với thuật toán binary search + substring matching
-- **Fuzzy Search**: Hỗ trợ tìm kiếm mờ có thể bật/tắt qua giao diện
-- **Icon Windows gốc**: Hiển thị icon thực tế của file từ hệ thống Windows (32x32)
-- **Lazy Loading**: Tải icon động khi scroll để tối ưu hiệu suất
-- **Virtual Scrolling**: Render chỉ các item hiển thị trên màn hình
-- **Cache thông minh**: 
-  - Gzip compression cho file cache (giảm ~40-60% dung lượng)
-  - Icon cache với chiến lược phân biệt (theo extension vs theo path)
-- **Giao diện thân thiện**: Dark mode với Tailwind CSS
-- **Phím tắt toàn cục**: Mở ứng dụng nhanh từ bất kỳ đâu
-- **Loading Screen**: Hiển thị trạng thái khi đang load cache/index disk
-- **Theo dõi file được mở**: Ghi lại open_count để ưu tiên kết quả
+## Key Features
 
-## Công nghệ sử dụng
+- **Fast Search**: Binary search + substring matching algorithm
+- **Fuzzy Search**: Toggleable fuzzy search via UI
+- **Native Windows Icons**: Display real file icons from Windows system (32x32)
+- **Lazy Loading**: Load icons dynamically on scroll for optimized performance
+- **Virtual Scrolling**: Render only visible items on screen
+- **Smart Caching**: 
+  - Gzip compression for file cache (~40-60% size reduction)
+  - Icon cache with differentiated strategy (by extension vs by path)
+- **User-friendly Interface**: Dark mode with Tailwind CSS
+- **Global Hotkeys**: Quick app launch from anywhere
+- **Loading Screen**: Display status while loading cache/indexing disk
+- **Track Opened Files**: Record open_count to prioritize results
+
+## Technology Stack
 
 - **Frontend**: Vanilla JavaScript, Tailwind CSS
 - **Backend**: Rust (Tauri 2.10.3)
-- **Windows API**: SHGetFileInfoW, DrawIconEx cho icon extraction
-- **Parallel Processing**: Rayon cho xử lý đa luồng
-- **Compression**: flate2 (gzip) cho cache
+- **Windows API**: SHGetFileInfoW, DrawIconEx for icon extraction
+- **Parallel Processing**: Rayon for multi-threading
+- **Compression**: flate2 (gzip) for cache
 - **Serialization**: bincode
-- **File Walking**: jwalk cho duyệt thư mục nhanh
+- **File Walking**: jwalk for fast directory traversal
 
-## Yêu cầu hệ thống
+## System Requirements
 
-- Chạy trên Windows 10/11
-- ~50-100MB RAM (tùy số lượng file được index)
-- ~5-20MB disk cho cache (đã nén)
+- Windows 10/11
+- ~50-100MB RAM (depending on number of indexed files)
+- ~5-20MB disk space for cache (compressed)
 
-## Hạn chế và vấn đề đã biết
+## Known Limitations and Issues
 
-- **Hiệu suất**: Indexing lần đầu có thể mất 10-30 giây tùy số lượng file
-- **Bảo mật**: Không có cơ chế xác thực hoặc mã hóa
-- **Ổn định**: Có thể crash khi xử lý file/folder với quyền hạn đặc biệt
-- **Testing**: Chưa có unit tests hoặc integration tests đầy đủ
-- **Icon cache**: Có thể tốn nhiều RAM nếu mở nhiều file .exe khác nhau
-- **Thread safety**: Có thể có race conditions chưa được phát hiện
-- **Error handling**: Một số lỗi chưa được xử lý đầy đủ
+- **Performance**: Initial indexing may take 10-30 seconds depending on file count
+- **Security**: No authentication or encryption mechanism
+- **Stability**: May crash when handling files/folders with special permissions
+- **Testing**: No comprehensive unit tests or integration tests yet
+- **Icon cache**: May consume significant RAM if opening many different .exe files
+- **Thread safety**: Potential undiscovered race conditions
+- **Error handling**: Some errors not fully handled
 
-## Build từ source
+## Build from Source
 
 ```bash
-# Cài đặt Rust (nếu chưa có)
+# Install Rust (if not already installed)
 # https://rustup.rs/
 
 # Clone repository
@@ -67,21 +69,21 @@ cd wsearch
 # Build release
 cargo build --release
 
-# Chạy ứng dụng
+# Run application
 cargo tauri dev
 ```
 
-## Giấy phép và Miễn trừ trách nhiệm
+## License and Disclaimer
 
-**MIỄN TRỪ TRÁCH NHIỆM:**
+**DISCLAIMER:**
 
-PHẦN MỀM NÀY ĐƯỢC CUNG CẤP "NGUYÊN TRẠNG", KHÔNG CÓ BẤT KỲ BẢO ĐẢM NÀO, RÕ RÀNG HAY NGỤ Ý, BAO GỒM NHƯNG KHÔNG GIỚI HẠN Ở CÁC BẢO ĐẢM VỀ KHẢ NĂNG THƯƠNG MẠI, PHÙ HỢP CHO MỘT MỤC ĐÍCH CỤ THỂ VÀ KHÔNG VI PHẠM.
+THIS SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
 
-TRONG BẤT KỲ TRƯỜNG HỢP NÀO, TÁC GIẢ HOẶC CHỦ SỞ HỮU BẢN QUYỀN KHÔNG CHỊU TRÁCH NHIỆM CHO BẤT KỲ KHIẾU NẠI, THIỆT HẠI HOẶC TRÁCH NHIỆM PHÁP LÝ NÀO, DÙ TRONG HỢP ĐỒNG, TỘI LỖI HAY CÁCH KHÁC, PHÁT SINH TỪ, NGOÀI HOẶC LIÊN QUAN ĐẾN PHẦN MỀM HOẶC VIỆC SỬ DỤNG HOẶC CÁC GIAO DỊCH KHÁC TRONG PHẦN MỀM.
+IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
-**DỰ ÁN NÀY CHỈ DÀNH CHO MỤC ĐÍCH GIÁO DỤC VÀ NGHIÊN CỨU.**
+**THIS PROJECT IS FOR EDUCATIONAL AND RESEARCH PURPOSES ONLY.**
 
 ---
 
-**Tác giả**: Dự án nghiên cứu được phát triển với Tauri và Rust  
-**Mục đích**: Học tập về desktop app development, Windows API, và Rust programming
+**Author**: [Phong-Dam](https://github.com/Phong-Dam)
+**Purpose**: Learning desktop app development, Windows API, and Rust programming
