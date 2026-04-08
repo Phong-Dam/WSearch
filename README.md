@@ -1,89 +1,202 @@
 # WSearch
 
-**English** | **[Tiếng Việt](README.vi.md)**
+> Ứng dụng tìm kiếm file desktop nhanh cho Windows
 
-> **⚠️ WARNING: RESEARCH PROJECT**  
-> This application is developed **FOR RESEARCH AND EDUCATIONAL PURPOSES ONLY**.  
-> **DO NOT USE** in production environments or for commercial purposes.  
-> The author assumes no responsibility for any damage arising from the use of this software.
+[![Rust](https://img.shields.io/badge/Rust-1.77+-orange.svg)](https://www.rust-lang.org)
+[![Tauri](https://img.shields.io/badge/Tauri-2.0-blue.svg)](https://tauri.app/)
+[![Platform](https://img.shields.io/badge/Platform-Windows%2010%2F11-green.svg)]()
 
-A fast and efficient desktop file search application for Windows built with Tauri and Rust.
+## Screenshots
 
-## About
+![WSearch](image/wsearch.png)
 
-WSearch is a desktop file search tool designed to help you quickly find files and folders on your computer. With an intuitive interface and fast search capabilities, WSearch saves you time when you need to find files.
+## Tính năng
 
-**Note:** This is an experimental project for learning purposes about Tauri, Rust, and Windows API. The code may contain bugs, lack security features, or not be fully optimized.
+- **Tìm kiếm nhanh** - Binary search cho prefix, substring scan, và fuzzy matching
+- **Cập nhật real-time** - File watcher tự động phát hiện file mới, sửa, xóa
+- **Native Icons** - Hiển thị icon Windows gốc dùng system APIs
+- **Tối ưu hiệu suất**
+  - Virtual scrolling - chỉ render items nhìn thấy
+  - Lazy icon loading khi scroll
+  - Xử lý song song với Rayon
+  - Cache nén Gzip (~40-60% giảm kích thước)
+- **Global Hotkeys** - Bật từ bất kỳ đâu với `Alt+Space` hoặc `Ctrl+Space`
+- **Smart Ranking** - Ưu tiên file được mở thường xuyên
 
-## Key Features
+## Benchmark
 
-- **Fast Search**: Binary search + substring matching algorithm
-- **Fuzzy Search**: Toggleable fuzzy search via UI
-- **Native Windows Icons**: Display real file icons from Windows system (32x32)
-- **Lazy Loading**: Load icons dynamically on scroll for optimized performance
-- **Virtual Scrolling**: Render only visible items on screen
-- **Smart Caching**: 
-  - Gzip compression for file cache (~40-60% size reduction)
-  - Icon cache with differentiated strategy (by extension vs by path)
-- **User-friendly Interface**: Dark mode with Tailwind CSS
-- **Global Hotkeys**: Quick app launch from anywhere
-- **Loading Screen**: Display status while loading cache/indexing disk
-- **Track Opened Files**: Record open_count to prioritize results
+Kết quả benchmark trên máy thực tế:
 
-## Technology Stack
+| Benchmark | Thời gian | Ghi chú |
+|-----------|-----------|---------|
+| `search_prefix_100k` | **6.01 ms** | Tìm prefix 100k files |
+| `search_prefix_500k` | **29.1 ms** | Tìm prefix 500k files |
+| `binary_search_100k` | **1.03 µs** | Binary search cực nhanh |
+| `fuzzy_match_10k` | **3.32 ms** | Fuzzy match 10k files |
+| `sort_50k_by_count` | **4.85 ms** | Sort 50k theo open_count |
 
-- **Frontend**: Vanilla JavaScript, Tailwind CSS
-- **Backend**: Rust (Tauri 2.10.3)
-- **Windows API**: SHGetFileInfoW, DrawIconEx for icon extraction
-- **Parallel Processing**: Rayon for multi-threading
-- **Compression**: flate2 (gzip) for cache
-- **Serialization**: bincode
-- **File Walking**: jwalk for fast directory traversal
+### Chi tiết Benchmark
 
-## System Requirements
-
-- Windows 10/11
-- ~50-100MB RAM (depending on number of indexed files)
-- ~5-20MB disk space for cache (compressed)
-
-## Known Limitations and Issues
-
-- **Performance**: Initial indexing may take 10-30 seconds depending on file count
-- **Security**: No authentication or encryption mechanism
-- **Stability**: May crash when handling files/folders with special permissions
-- **Testing**: No comprehensive unit tests or integration tests yet
-- **Icon cache**: May consume significant RAM if opening many different .exe files
-- **Thread safety**: Potential undiscovered race conditions
-- **Error handling**: Some errors not fully handled
-
-## Build from Source
-
-```bash
-# Install Rust (if not already installed)
-# https://rustup.rs/
-
-# Clone repository
-git clone <repo-url>
-cd wsearch
-
-# Build release
-cargo build --release
-
-# Run application
-cargo tauri dev
+```
+search_prefix_100k      time:   [6.0104 ms 6.0279 ms 6.0507 ms]
+search_prefix_500k      time:   [29.043 ms 29.116 ms 29.171 ms]
+binary_search_100k       time:   [1.0255 µs 1.0281 µs 1.0308 µs]
+fuzzy_match_10k         time:   [3.1414 ms 3.3245 ms 3.4454 ms]
+sort_50k_by_count       time:   [4.6486 ms 4.8461 ms 5.1184 ms]
 ```
 
-## License and Disclaimer
+### Điều kiện test
+- CPU: Intel/AMD processor
+- RAM: 16GB+
+- Disk: SSD
 
-**DISCLAIMER:**
+## Bắt đầu
 
-THIS SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
+### Tải về
 
-IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+Download phiên bản release từ [Releases](https://github.com/Phong-Dam/WSearch/releases) page.
 
-**THIS PROJECT IS FOR EDUCATIONAL AND RESEARCH PURPOSES ONLY.**
+### Build từ source
+
+```bash
+# Cài Rust - https://rustup.rs/
+
+# Clone repository
+git clone https://github.com/Phong-Dam/WSearch.git
+cd wsearch
+
+# Development build
+cargo tauri dev
+
+# Production build
+cargo build --release
+```
+
+Executable sẽ ở `target/release/app.exe`.
+
+## Cách sử dụng
+
+1. **Khởi động** - Nhấn `Alt+Space` hoặc `Ctrl+Space` ở bất kỳ đâu, hoặc chạy app trực tiếp
+2. **Tìm kiếm** - Gõ query để tìm file ngay lập tức
+3. **Di chuyển** - Dùng phím mũi tên hoặc chuột để chọn kết quả
+4. **Mở file** - Nhấn `Enter` để mở file đã chọn
+5. **Hiện trong thư mục** - Click chuột phải để show file trong Explorer
+
+### Các chế độ tìm kiếm
+
+| Mode | Trigger | Mô tả |
+|------|---------|--------|
+| Prefix | Mặc định | Khớp files bắt đầu bằng query |
+| Substring | Tự động | Fallback khi prefix matches < 100 results |
+| Fuzzy | Toggle trong UI | Khớp với typos, bật qua checkbox |
+
+## Performance
+
+| Metric | Giá trị |
+|--------|---------|
+| Scan ban đầu (500k files) | ~30-60 giây |
+| Load cache | < 1 giây |
+| Search latency (prefix) | < 10ms |
+| Search latency (substrings) | < 50ms |
+| Memory usage | ~50-100MB (500k files) |
+| Cache size | ~5-20MB (nén) |
+
+## Keyboard Shortcuts
+
+| Shortcut | Action |
+|----------|--------|
+| `Alt+Space` / `Ctrl+Space` | Toggle app visibility |
+| `Up/Down` | Navigate results |
+| `Enter` | Open selected file |
+| `Escape` | Hide app / Clear search |
+
+## Tech Stack
+
+| Layer | Technology |
+|-------|------------|
+| Framework | [Tauri 2.0](https://tauri.app/) |
+| Language | Rust 1.77+ |
+| Frontend | Vanilla JS, Tailwind CSS |
+| File Watching | [notify](https://github.com/notify-rs/notify) |
+| Parallelism | [Rayon](https://github.com/rayon-rs/rayon) |
+| Directory Traversal | [jwalk](https://github.com/jeijei4/jwalk) |
+| Serialization | [bincode](https://github.com/bincode-org/bincode) |
+| Compression | [flate2](https://github.com/rust-lang/flate2-rs) |
+| Benchmarking | [criterion](https://github.com/bheisler/criterion.rs) |
+
+## Architecture
+
+```
+┌─────────────────────────────────────────────────────────┐
+│                      Frontend (UI)                       │
+│  ┌─────────┐  ┌──────────┐  ┌─────────┐  ┌─────────┐ │
+│  │ Search  │  │ Renderer │  │  State  │  │Benchmark│ │
+│  │ Manager │  │(Virtual) │  │ Manager │  │ Display │ │
+│  └────┬────┘  └────┬─────┘  └────┬────┘  └────┬────┘ │
+└───────┼───────────┼──────────────┼─────────────┼──────┘
+        │           │              │             │
+        └───────────┴──────┬───────┴─────────────┘
+                           │ Tauri IPC
+┌──────────────────────────┼────────────────────────────────┐
+│                     Backend (Rust)                        │
+│  ┌─────────┐  ┌──────────┐  ┌─────────┐  ┌──────────┐ │
+│  │ Search  │  │  Cache   │  │ Watcher │  │   Icon    │ │
+│  │ Engine  │  │ Manager  │  │(notify) │  │ Extractor │ │
+│  └─────────┘  └──────────┘  └─────────┘  └──────────┘ │
+│         │           │              │              │       │
+│         └───────────┼──────────────┼──────────────┘       │
+│                     │              │                       │
+│              ┌──────┴──────────────┴──────┐                │
+│              │     File Index (in-memory) │                │
+│              │  - Vec<FileInfo> (sorted)  │                │
+│              │  - HashMap<path, index>     │                │
+│              └───────────────────────────┘                │
+└───────────────────────────────────────────────────────────┘
+```
+
+### Key Components
+
+| Component | Description |
+|-----------|-------------|
+| **Search Engine** | Binary search cho prefix, parallel substring scan, fuzzy matching |
+| **Cache Manager** | Gzip compressed disk cache, auto-save mỗi 2s, background cleanup |
+| **File Watcher** | Real-time monitoring via `notify` crate với debounced event processing |
+| **Icon Extractor** | SHGetFileInfoW + DrawIconEx cho native Windows icons |
+
+## Configuration
+
+### Thư mục bị bỏ qua
+
+Các thư mục sau bị exclude khi indexing:
+
+```
+node_modules, .git, AppData, $Recycle.Bin,
+Windows, System32, ProgramData, Recovery
+```
+
+### Vị trí Cache
+
+- **Primary**: Cùng directory với `app.exe`
+- **Fallback**: `%TEMP%/wsearch_index_cache.dat`
+
+### Environment Variables
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `WSearch_CACHE_PATH` | (auto) | Custom cache file location |
+
+## Contributing
+
+Contributions are welcome! Please feel free to submit a Pull Request.
+
+## License
+
+MIT License - See [LICENSE](LICENSE) for details.
+
+## Author
+
+**Phong-Dam** - [GitHub](https://github.com/Phong-Dam)
 
 ---
 
-**Author**: [Phong-Dam](https://github.com/Phong-Dam)  
-**Purpose**: Learning desktop app development, Windows API, and Rust programming
+*WSearch là project học tập để hiểu Tauri, Rust, và Windows API.*

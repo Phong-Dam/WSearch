@@ -1,0 +1,320 @@
+/**
+ * WSearch - Styles
+ * Separated from HTML for better maintainability
+ */
+
+/* ============================================
+   CSS Custom Properties
+   ============================================ */
+:root {
+    /* Column widths */
+    --col-icon: 32px;
+    --col-name: 260px;
+    --col-size: 80px;
+    --col-path: 1fr;
+
+    /* Colors */
+    --color-bg: #18181b;
+    --color-bg-elevated: #27272a;
+    --color-bg-hover: #3f3f46;
+    --color-border: #3f3f46;
+    --color-text: #e4e4e7;
+    --color-text-muted: #a1a1aa;
+    --color-primary: #3b82f6;
+    --color-resizer-hover: #3b82f6;
+    --color-spinner: #fbbf24;
+}
+
+/* ============================================
+   Base Styles
+   ============================================ */
+body {
+    overflow: hidden;
+    background-color: var(--color-bg);
+    color: var(--color-text);
+}
+
+/* ============================================
+   Results List
+   ============================================ */
+#results {
+    height: calc(100vh - 70px);
+    overflow: auto;
+}
+
+.row {
+    display: grid;
+    grid-template-columns: var(--col-icon) var(--col-name) var(--col-size) var(--col-path);
+    align-items: center;
+    height: 32px;
+    padding: 0 12px;
+    cursor: pointer;
+    transition: background-color 0.1s;
+}
+
+.row:hover {
+    background-color: var(--color-bg-hover);
+}
+
+.row.selected {
+    background-color: var(--color-primary);
+}
+
+/* ============================================
+   Column Headers
+   ============================================ */
+.column-header {
+    position: relative;
+    display: flex;
+    align-items: center;
+    height: 100%;
+    padding: 0 12px;
+    color: var(--color-text-muted);
+    font-weight: bold;
+    cursor: pointer;
+    user-select: none;
+}
+
+.column-header:hover {
+    background-color: var(--color-bg-hover);
+}
+
+.column-header .cursor-pointer {
+    flex: 1;
+}
+
+/* ============================================
+   Column Resizers
+   ============================================ */
+.resizer {
+    width: 4px;
+    height: 100%;
+    cursor: col-resize;
+    position: absolute;
+    right: 0;
+    top: 0;
+    z-index: 10;
+    background-color: transparent;
+    transition: background-color 0.15s;
+}
+
+.resizer:hover,
+.resizer.resizing {
+    background-color: var(--color-resizer-hover);
+}
+
+/* ============================================
+   Context Menu
+   ============================================ */
+#contextMenu {
+    display: none;
+    position: fixed;
+    background-color: var(--color-bg-elevated);
+    border: 1px solid var(--color-border);
+    border-radius: 4px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
+    z-index: 1000;
+    min-width: 180px;
+    padding: 4px 0;
+}
+
+#contextMenu div {
+    padding: 8px 12px;
+    cursor: pointer;
+    transition: background-color 0.15s;
+}
+
+#contextMenu div:hover {
+    background-color: var(--color-bg-hover);
+}
+
+/* ============================================
+   Icon Styles
+   ============================================ */
+.icon-img {
+    width: 16px;
+    height: 16px;
+    image-rendering: -webkit-optimize-contrast;
+    image-rendering: crisp-edges;
+}
+
+.icon-emoji {
+    font-size: 14px;
+    line-height: 1;
+}
+
+/* ============================================
+   Loading Spinner
+   ============================================ */
+@keyframes spin {
+    0% {
+        transform: rotate(0deg);
+    }
+    100% {
+        transform: rotate(360deg);
+    }
+}
+
+.spinner {
+    border: 4px solid var(--color-bg-elevated);
+    border-top: 4px solid var(--color-spinner);
+    border-radius: 50%;
+    width: 48px;
+    height: 48px;
+    animation: spin 1s linear infinite;
+}
+
+/* ============================================
+   Toast Notifications
+   ============================================ */
+.toast-container {
+    position: fixed;
+    bottom: 20px;
+    right: 20px;
+    z-index: 9999;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.toast {
+    background-color: var(--color-bg-elevated);
+    border: 1px solid var(--color-border);
+    border-radius: 4px;
+    padding: 12px 16px;
+    color: var(--color-text);
+    font-size: 14px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+    opacity: 0;
+    transform: translateX(100%);
+    transition: opacity 0.3s, transform 0.3s;
+    max-width: 300px;
+}
+
+.toast.toast-visible {
+    opacity: 1;
+    transform: translateX(0);
+}
+
+.toast.toast-hidden {
+    opacity: 0;
+    transform: translateX(100%);
+}
+
+.toast-success {
+    border-left: 3px solid #22c55e;
+}
+
+.toast-error {
+    border-left: 3px solid #ef4444;
+}
+
+.toast-warning {
+    border-left: 3px solid #f59e0b;
+}
+
+.toast-info {
+    border-left: 3px solid var(--color-primary);
+}
+
+/* ============================================
+   Utility Classes
+   ============================================ */
+.hidden {
+    display: none !important;
+}
+
+.truncate {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.text-yellow-400 {
+    color: #fbbf24;
+}
+
+.text-zinc-400 {
+    color: var(--color-text-muted);
+}
+
+.text-xs {
+    font-size: 0.75rem;
+}
+
+/* ============================================
+   Scrollbar Styling
+   ============================================ */
+#results::-webkit-scrollbar {
+    width: 8px;
+}
+
+#results::-webkit-scrollbar-track {
+    background: var(--color-bg);
+}
+
+#results::-webkit-scrollbar-thumb {
+    background: var(--color-bg-elevated);
+    border-radius: 4px;
+}
+
+#results::-webkit-scrollbar-thumb:hover {
+    background: var(--color-bg-hover);
+}
+
+/* ============================================
+   Empty State
+   ============================================ */
+.empty-state {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    height: 100%;
+    color: var(--color-text-muted);
+    text-align: center;
+    padding: 20px;
+}
+
+.empty-state-icon {
+    font-size: 48px;
+    margin-bottom: 16px;
+    opacity: 0.5;
+}
+
+.empty-state-text {
+    font-size: 16px;
+    margin-bottom: 8px;
+}
+
+.empty-state-hint {
+    font-size: 14px;
+    opacity: 0.7;
+}
+
+/* ============================================
+   Loading Overlay
+   ============================================ */
+.loading-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 2px;
+    background: linear-gradient(90deg, 
+        var(--color-primary) 0%, 
+        var(--color-spinner) 50%, 
+        var(--color-primary) 100%
+    );
+    background-size: 200% 100%;
+    animation: loading-bar 1.5s linear infinite;
+}
+
+@keyframes loading-bar {
+    0% {
+        background-position: 200% 0;
+    }
+    100% {
+        background-position: -200% 0;
+    }
+}
