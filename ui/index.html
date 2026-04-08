@@ -1,632 +1,96 @@
 <!DOCTYPE html>
-<html>
+<html lang="vi">
 <head>
-<meta charset="UTF-8">
-<title>Fast Search</title>
-
-<script src="https://cdn.tailwindcss.com"></script>
-
-<style>
-:root {
-    /* Khởi tạo độ rộng mặc định cho các cột */
-    --col-icon: 32px;
-    --col-name: 260px;
-    --col-size: 80px;
-    --col-path: 1fr;
-}
-
-body { overflow: hidden; }
-
-#results {
-    height: calc(100vh - 70px);
-    overflow: auto;
-}
-
-.row {
-    display: grid;
-    /* Sử dụng biến CSS để tất cả các hàng đều co giãn cùng nhau */
-    grid-template-columns: var(--col-icon) var(--col-name) var(--col-size) var(--col-path);
-    align-items: center;
-    height: 32px;
-}
-
-/* Thanh nắm để kéo rộng cột */
-.resizer {
-    width: 4px;
-    height: 100%;
-    cursor: col-resize;
-    position: absolute;
-    right: 0;
-    top: 0;
-    z-index: 10;
-}
-.resizer:hover, .resizing {
-    background: #3b82f6; /* Màu xanh khi hover hoặc đang kéo */
-}
-
-.column-header {
-    position: relative;
-    display: flex;
-    align-items: center;
-    height: 100%;
-    padding: 0 12px;
-}
-
-/* Context Menu */
-#contextMenu {
-    display: none;
-    position: fixed;
-    background: #27272a;
-    border: 1px solid #52525b;
-    border-radius: 4px;
-    box-shadow: 0 4px 12px rgba(0,0,0,0.5);
-    z-index: 1000;
-    min-width: 180px;
-}
-
-#contextMenu div {
-    padding: 8px 12px;
-    cursor: pointer;
-    transition: background 0.15s;
-}
-
-#contextMenu div:hover {
-    background: #3f3f46;
-}
-
-.icon-img {
-    image-rendering: -webkit-optimize-contrast;
-    image-rendering: crisp-edges;
-}
-
-@keyframes spin {
-    0% { transform: rotate(0deg); }
-    100% { transform: rotate(360deg); }
-}
-
-.spinner {
-    border: 4px solid #27272a;
-    border-top: 4px solid #fbbf24;
-    border-radius: 50%;
-    width: 48px;
-    height: 48px;
-    animation: spin 1s linear infinite;
-}
-
-.hidden { display: none !important; }
-</style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WSearch - Fast File Search</title>
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- Custom Styles -->
+    <link rel="stylesheet" href="css/styles.css">
 </head>
 
 <body class="bg-zinc-900 text-zinc-200 text-sm font-mono">
 
-<!-- LOADING SCREEN -->
-<div id="loadingScreen" class="fixed inset-0 bg-zinc-900 flex flex-col items-center justify-center">
-    <div class="spinner mb-6"></div>
-    <div class="text-2xl font-bold text-yellow-400 mb-2" id="loadingText">📦 Đang tải cache...</div>
-    <div class="text-lg text-zinc-400" id="loadingCount"></div>
-</div>
-
-<!-- MAIN CONTENT -->
-<div id="mainContent" class="hidden">
-<div class="p-3 border-b border-zinc-700">
-    <input id="search"
-        class="w-full bg-zinc-800 p-2 rounded outline-none text-lg"
-        placeholder="Search files..."
-        autocomplete="off"
-        autofocus>
-    <div class="mt-2 flex items-center">
-        <label class="flex items-center cursor-pointer text-xs text-zinc-400 hover:text-zinc-200">
-            <input type="checkbox" id="useFuzzy" class="mr-2 w-4 h-4" checked>
-            <span>🔍 Sử dụng Fuzzy Search (tìm kiếm mờ)</span>
-        </label>
-    </div>
-</div>
-
-<div id="header" class="row border-b border-zinc-700 text-zinc-400 font-bold bg-zinc-900">
-    <div class="column-header"></div>
-    
-    <div class="column-header hover:bg-zinc-800 group">
-        <span class="cursor-pointer flex-1" data-sort="name">Name</span>
-        <div class="resizer" id="resizer-name"></div>
+    <!-- ============================================
+         LOADING SCREEN
+         ============================================ -->
+    <div id="loadingScreen" class="fixed inset-0 bg-zinc-900 flex flex-col items-center justify-center">
+        <div class="spinner mb-6"></div>
+        <div class="text-2xl font-bold text-yellow-400 mb-2" id="loadingText">Đang tải...</div>
+        <div class="text-lg text-zinc-400" id="loadingCount"></div>
     </div>
 
-    <div class="column-header hover:bg-zinc-800 group">
-        <span class="cursor-pointer flex-1" data-sort="size">Size</span>
-        <div class="resizer" id="resizer-size"></div>
-    </div>
-
-    <div class="column-header hover:bg-zinc-800 group">
-        <span class="cursor-pointer flex-1" data-sort="path">Path</span>
-    </div>
-</div>
-
-<div id="contextMenu">
-    <div id="ctxOpen">📂 Open File</div>
-    <div id="ctxShowFolder">📁 Show in Folder</div>
-    <div id="ctxCopyPath">📋 Copy Path</div>
-    <div id="ctxCopyName">📝 Copy Name</div>
-</div>
-
-<div id="results"></div>
-</div>
-<!-- END MAIN CONTENT -->
-
-<script type="module">
-const { invoke } = window.__TAURI__.core
-
-const list = document.getElementById("results")
-const input = document.getElementById("search")
-const useFuzzyCheckbox = document.getElementById("useFuzzy")
-
-let results = []
-let selected = 0
-let searchId = 0
-let query = ""
-let useFuzzy = localStorage.getItem('useFuzzy') !== 'false' // Default true
-
-let sortField = "name"
-let sortDir = 1
-
-const rowHeight = 32
-const visibleCount = 70
-
-// ---------- LOADING SCREEN ----------
-const loadingScreen = document.getElementById("loadingScreen")
-const mainContent = document.getElementById("mainContent")
-const loadingText = document.getElementById("loadingText")
-const loadingCount = document.getElementById("loadingCount")
-let isIndexing = true
-let lastIndexCount = 0
-let indexCheckInterval = null
-
-async function checkIndexStatus() {
-    try {
-        const count = await invoke("get_index_status")
+    <!-- ============================================
+         MAIN CONTENT
+         ============================================ -->
+    <div id="mainContent" class="hidden">
         
-        if (count === 0) {
-            // Đang load cache hoặc chưa có dữ liệu
-            loadingText.textContent = "📦 Đang tải cache..."
-            loadingCount.textContent = "Vui lòng đợi trong giây lát..."
-            loadingScreen.classList.remove("hidden")
-            mainContent.classList.add("hidden")
-        } else if (count > lastIndexCount) {
-            // Đang index thêm file
-            loadingText.textContent = "🔍 Đang quét ổ đĩa..."
-            loadingCount.textContent = `Đã tìm thấy ${count.toLocaleString()} files`
-            loadingScreen.classList.remove("hidden")
-            mainContent.classList.add("hidden")
-            lastIndexCount = count
-        } else if (count === lastIndexCount && count > 0) {
-            // Indexing hoàn tất
-            if (isIndexing) {
-                loadingText.textContent = "✅ Hoàn tất!"
-                loadingCount.textContent = `Tổng cộng ${count.toLocaleString()} files`
-                
-                setTimeout(() => {
-                    loadingScreen.classList.add("hidden")
-                    mainContent.classList.remove("hidden")
-                    input.focus()
-                }, 1000)
-                
-                isIndexing = false
-                if (indexCheckInterval) {
-                    clearInterval(indexCheckInterval)
-                    indexCheckInterval = null
-                }
-            }
-        }
-        
-        lastIndexCount = count
-    } catch(err) {
-        console.error("Check status error:", err)
-    }
-}
-
-// Check status on load and periodically
-checkIndexStatus()
-indexCheckInterval = setInterval(checkIndexStatus, 500)
-
-// ---------- RESIZE LOGIC ----------
-function setupResizer(resizerId, cssVarName, minWidth = 60) {
-    const resizer = document.getElementById(resizerId);
-    if (!resizer) return;
-    
-    let isResizing = false;
-    
-    resizer.addEventListener("mousedown", (e) => {
-        isResizing = true;
-        resizer.classList.add("resizing");
-        document.body.style.cursor = "col-resize";
-        
-        const startX = e.pageX;
-        const startWidth = parseInt(getComputedStyle(document.documentElement).getPropertyValue(cssVarName));
-
-        const onMouseMove = (e) => {
-            if (!isResizing) return;
-            const newWidth = startWidth + (e.pageX - startX);
-            if (newWidth > minWidth) {
-                document.documentElement.style.setProperty(cssVarName, `${newWidth}px`);
-            }
-        };
-
-        const onMouseUp = () => {
-            isResizing = false;
-            resizer.classList.remove("resizing");
-            document.body.style.cursor = "default";
-            document.removeEventListener("mousemove", onMouseMove);
-            document.removeEventListener("mouseup", onMouseUp);
-        };
-
-        document.addEventListener("mousemove", onMouseMove);
-        document.addEventListener("mouseup", onMouseUp);
-    });
-}
-
-setupResizer("resizer-name", "--col-name", 100);
-setupResizer("resizer-size", "--col-size", 60);
-
-// ---------- UTILITY ----------
-function debounce(fn,delay){
-    let t
-    return (...a)=>{
-        clearTimeout(t)
-        t=setTimeout(()=>fn(...a),delay)
-    }
-}
-
-function escapeHtml(text) {
-    return text.replace(/"/g, '&quot;').replace(/'/g, '&#39;');
-}
-
-// ---------- ICON CACHE ----------
-const iconCache = new Map();
-let isLoadingIcons = false;
-
-// File extensions that have unique icons per file (don't cache by extension)
-const UNIQUE_ICON_EXTS = new Set(['exe', 'lnk', 'dll', 'ico', 'scr', 'cpl', 'msc']);
-
-// Clear old cache on load (for development)
-if (window.localStorage) {
-    const cacheVersion = 'v2'; // Increment này để force clear cache
-    if (localStorage.getItem('iconCacheVersion') !== cacheVersion) {
-        localStorage.setItem('iconCacheVersion', cacheVersion);
-        console.log('Icon cache cleared');
-    }
-}
-
-// ---------- ICON ----------
-function getIcon(f){
-    // Return placeholder while loading
-    if(f.is_dir) return "📁"
-    return "📄"
-}
-
-function getCacheKey(path, extension) {
-    // For files with unique icons, use path as cache key
-    // For normal files, use extension
-    if (UNIQUE_ICON_EXTS.has(extension)) {
-        return `file:${path}`;
-    }
-    return `ext:${extension || "_folder_"}`;
-}
-
-async function loadIconForFile(path, extension, imgElement) {
-    // Check cache first
-    const cacheKey = getCacheKey(path, extension);
-    if (iconCache.has(cacheKey)) {
-        imgElement.src = iconCache.get(cacheKey);
-        imgElement.style.display = "block";
-        const emoji = imgElement.parentElement.querySelector(".icon-emoji");
-        if (emoji) emoji.style.display = "none";
-        return;
-    }
-    
-    try {
-        const iconData = await invoke("get_file_icon", {path});
-        
-        // iconData format: "data:image/rgba;base64,...,32"
-        // Parse to get base64 data and size
-        const parts = iconData.split(',');
-        const base64Data = parts[1];
-        const size = parseInt(parts[2]) || 32;  // Default 32
-        
-        const rawData = atob(base64Data);
-        const bytes = new Uint8ClampedArray(rawData.length);
-        for (let i = 0; i < rawData.length; i++) {
-            bytes[i] = rawData.charCodeAt(i);
-        }
-        
-        // Create canvas with original size
-        const canvas = document.createElement('canvas');
-        canvas.width = size;
-        canvas.height = size;
-        const ctx = canvas.getContext('2d');
-        const imageData = new ImageData(bytes, size, size);
-        ctx.putImageData(imageData, 0, 0);
-        
-        // Convert to PNG data URL
-        const pngDataUrl = canvas.toDataURL('image/png');
-        
-        iconCache.set(cacheKey, pngDataUrl);
-        imgElement.src = pngDataUrl;
-        imgElement.style.display = "block";
-        const emoji = imgElement.parentElement.querySelector(".icon-emoji");
-        if (emoji) emoji.style.display = "none";
-    } catch(err) {
-        console.error("Failed to load icon:", err);
-        // Keep emoji placeholder
-    }
-}
-
-function lazyLoadVisibleIcons() {
-    if (isLoadingIcons) return;
-    isLoadingIcons = true;
-    
-    requestAnimationFrame(() => {
-        const rows = list.querySelectorAll(".row[data-path]");
-        const viewportTop = list.scrollTop;
-        const viewportBottom = viewportTop + list.clientHeight;
-        
-        rows.forEach(row => {
-            const rowTop = row.offsetTop;
-            const rowBottom = rowTop + rowHeight;
+        <!-- Search Bar -->
+        <div class="p-3 border-b border-zinc-700">
+            <input 
+                id="search"
+                class="w-full bg-zinc-800 p-2 rounded outline-none text-lg"
+                placeholder="Search files..."
+                autocomplete="off"
+                autofocus>
             
-            // Check if row is visible
-            if (rowBottom >= viewportTop && rowTop <= viewportBottom) {
-                const path = row.dataset.path;
-                const ext = path.split(".").pop().toLowerCase();
-                const cacheKey = getCacheKey(path, ext);
-                
-                // Only load if not already cached
-                if (!iconCache.has(cacheKey)) {
-                    const img = row.querySelector(".icon-img");
-                    if (img) {
-                        loadIconForFile(path, ext, img);
-                    }
-                }
-            }
-        });
-        
-        isLoadingIcons = false;
-    });
-}
-
-// Create debounced version for scroll
-const debouncedIconLoad = debounce(lazyLoadVisibleIcons, 150);
-
-// ---------- HIGHLIGHT ----------
-function highlight(text){
-    if(!query) return text
-    const r = new RegExp(query,"ig")
-    return text.replace(r, m => `<span class="text-yellow-400">${m}</span>`)
-}
-
-// ---------- FORMAT SIZE ----------
-function formatSize(bytes) {
-    if (bytes === 0) return "-";
-    const units = ['B', 'KB', 'MB', 'GB', 'TB'];
-    const i = Math.floor(Math.log(bytes) / Math.log(1024));
-    return (bytes / Math.pow(1024, i)).toFixed(i > 0 ? 1 : 0) + ' ' + units[i];
-}
-
-// ---------- SORT ----------
-function sortResults(){
-    results.sort((a,b)=>{
-        if(a.open_count !== b.open_count) return b.open_count - a.open_count
-        let v1=a[sortField]; let v2=b[sortField]
-        // Handle numeric fields
-        if(sortField === "size") {
-            return sortDir * (v1 - v2)
-        }
-        // Handle string fields
-        if(v1<v2) return -1*sortDir
-        if(v1>v2) return 1*sortDir
-        return 0
-    })
-}
-
-// ---------- SEARCH ----------
-async function search(q){
-    query = q
-    console.log("Searching for:", q)
-    if(!q || q.trim() === "") {
-        results = []
-        lastRenderStart = -1
-        render()
-        return
-    }
-    
-    try {
-        const id = ++searchId
-        const res = await invoke("search_files",{query:q,searchId:id,useFuzzy:useFuzzy})
-        console.log("Search results:", res, "useFuzzy:", useFuzzy)
-        if(res.search_id!==searchId) return
-        results = res.results
-        sortResults()
-        selected = 0
-        lastRenderStart = -1
-        render()
-    } catch(err) {
-        console.error("Search error:", err)
-        results = []
-        lastRenderStart = -1
-        render()
-    }
-}
-
-const searchDebounce = debounce(search, 40)
-
-// ---------- RENDER ----------
-let lastRenderStart = -1;
-
-function render(){
-    const scroll = list.scrollTop
-    const start = Math.floor(scroll/rowHeight)
-    const end = start + visibleCount
-    
-    // Only re-render if viewport changed significantly
-    if (lastRenderStart === start) {
-        // Just update icons for current view
-        debouncedIconLoad();
-        return;
-    }
-    lastRenderStart = start;
-    
-    const slice = results.slice(start,end)
-    const offset = start * rowHeight
-
-    list.innerHTML = `
-    <div style="height:${results.length*rowHeight}px;position:relative">
-        <div style="transform:translateY(${offset}px)">
-            ${slice.map((f,i)=>{
-                const index = start+i
-                const active = index===selected
-                const emoji = getIcon(f)
-                
-                // Check if icon is already cached
-                const ext = f.path.split(".").pop().toLowerCase();
-                const cacheKey = getCacheKey(f.path, ext);
-                const cachedIcon = iconCache.get(cacheKey);
-                
-                return `
-                <div class="row px-3 cursor-pointer ${active?"bg-blue-600":"hover:bg-zinc-800"}" data-index="${index}" data-path="${escapeHtml(f.path)}" data-name="${escapeHtml(f.name)}">
-                    <div class="flex justify-center items-center">
-                        ${cachedIcon 
-                            ? `<img class="icon-img w-4 h-4" src="${cachedIcon}" alt="${emoji}" title="${emoji}">` 
-                            : `<img class="icon-img w-4 h-4" src="" alt="${emoji}" title="${emoji}" style="display:none;">
-                               <span class="icon-emoji">${emoji}</span>`
-                        }
-                    </div>
-                    <div class="truncate pr-4">${highlight(f.name)}</div>
-                    <div class="truncate text-zinc-400 text-xs">${formatSize(f.size)}</div>
-                    <div class="truncate text-zinc-400">${f.path}</div>
-                </div>`
-            }).join("")}
+            <div class="mt-2 flex items-center">
+                <label class="flex items-center cursor-pointer text-xs text-zinc-400 hover:text-zinc-200">
+                    <input 
+                        type="checkbox" 
+                        id="useFuzzy" 
+                        class="mr-2 w-4 h-4" 
+                        checked>
+                    <span>Fuzzy Search</span>
+                </label>
+            </div>
         </div>
-    </div>`
-    
-    // Lazy load icons for visible rows that don't have cached icons
-    setTimeout(() => lazyLoadVisibleIcons(), 50);
-}
 
-list.addEventListener("scroll", () => {
-    // Only lazy load icons on scroll, don't re-render unless viewport changed
-    render();
-});
+        <!-- Column Headers -->
+        <div id="header" class="row border-b border-zinc-700 text-zinc-400 font-bold bg-zinc-900">
+            <div class="column-header"></div>
+            
+            <div class="column-header hover:bg-zinc-800 group">
+                <span class="cursor-pointer flex-1" data-sort="name">Name</span>
+                <div class="resizer" id="resizer-name"></div>
+            </div>
 
-// ---------- KEYBOARD ----------
-document.addEventListener("keydown", e => {
-    if(e.key==="ArrowDown"){
-        selected = Math.min(selected+1, results.length-1)
-        lastRenderStart = -1  // Force re-render to update highlight
-        ensureVisible(); render()
-    }
-    if(e.key==="ArrowUp"){
-        selected = Math.max(selected-1, 0)
-        lastRenderStart = -1  // Force re-render to update highlight
-        ensureVisible(); render()
-    }
-    if(e.key==="Enter"){
-        const f = results[selected]
-        if(f){
-            invoke("open_path",{path:f.path})
-            invoke("record_open",{path:f.path})
-        }
-    }
-})
+            <div class="column-header hover:bg-zinc-800 group">
+                <span class="cursor-pointer flex-1" data-sort="size">Size</span>
+                <div class="resizer" id="resizer-size"></div>
+            </div>
 
-// ---------- CLICK ----------
-list.addEventListener("click", e => {
-    const row = e.target.closest(".row")
-    if(!row) return
-    const index = parseInt(row.dataset.index)
-    const f = results[index]
-    invoke("open_path",{path:f.path})
-    invoke("record_open",{path:f.path})
-})
+            <div class="column-header hover:bg-zinc-800 group">
+                <span class="cursor-pointer flex-1" data-sort="path">Path</span>
+            </div>
+        </div>
 
-// ---------- CONTEXT MENU ----------
-const contextMenu = document.getElementById("contextMenu");
-let contextTarget = null;
+        <!-- Context Menu -->
+        <div id="contextMenu">
+            <div id="ctxOpen">Open File</div>
+            <div id="ctxShowFolder">Show in Folder</div>
+            <div id="ctxCopyPath">Copy Path</div>
+            <div id="ctxCopyName">Copy Name</div>
+        </div>
 
-list.addEventListener("contextmenu", e => {
-    e.preventDefault();
-    const row = e.target.closest(".row");
-    if (!row) return;
-    
-    contextTarget = {
-        path: row.dataset.path,
-        name: row.dataset.name,
-        index: parseInt(row.dataset.index)
-    };
-    
-    contextMenu.style.display = "block";
-    contextMenu.style.left = e.pageX + "px";
-    contextMenu.style.top = e.pageY + "px";
-});
+        <!-- Results List -->
+        <div id="results"></div>
 
-document.addEventListener("click", () => {
-    contextMenu.style.display = "none";
-});
+        <!-- Empty State (hidden by default) -->
+        <div id="emptyState" class="hidden">
+            <div class="empty-state">
+                <div class="empty-state-icon">🔍</div>
+                <div class="empty-state-text">No results found</div>
+                <div class="empty-state-hint">Try a different search term</div>
+            </div>
+        </div>
+    </div>
+    <!-- END MAIN CONTENT -->
 
-document.getElementById("ctxOpen").addEventListener("click", () => {
-    if (contextTarget) {
-        invoke("open_path", {path: contextTarget.path});
-        invoke("record_open", {path: contextTarget.path});
-    }
-});
-
-document.getElementById("ctxShowFolder").addEventListener("click", () => {
-    if (contextTarget) {
-        invoke("show_in_folder", {path: contextTarget.path});
-    }
-});
-
-document.getElementById("ctxCopyPath").addEventListener("click", async () => {
-    if (contextTarget) {
-        await navigator.clipboard.writeText(contextTarget.path);
-    }
-});
-
-document.getElementById("ctxCopyName").addEventListener("click", async () => {
-    if (contextTarget) {
-        await navigator.clipboard.writeText(contextTarget.name);
-    }
-});
-
-function ensureVisible(){
-    const y = selected*rowHeight
-    if(y < list.scrollTop) list.scrollTop = y
-    if(y > list.scrollTop + list.clientHeight - rowHeight)
-        list.scrollTop = y - list.clientHeight + rowHeight
-}
-
-document.getElementById("header").addEventListener("click", e => {
-    const field = e.target.dataset.sort
-    if(!field) return
-    if(sortField===field) sortDir*=-1
-    else { sortField=field; sortDir=1 }
-    lastRenderStart = -1
-    sortResults(); render()
-})
-
-// Khởi tạo và lắng nghe checkbox fuzzy search
-useFuzzyCheckbox.checked = useFuzzy
-console.log("Initial useFuzzy:", useFuzzy, "localStorage:", localStorage.getItem('useFuzzy'))
-useFuzzyCheckbox.addEventListener("change", e => {
-    useFuzzy = e.target.checked
-    localStorage.setItem('useFuzzy', useFuzzy)
-    console.log("Fuzzy search toggled:", useFuzzy)
-    // Tìm kiếm lại nếu đang có query
-    if (query) {
-        search(query)
-    }
-})
-
-input.addEventListener("input", e => {
-    searchDebounce(e.target.value)
-})
-</script>
-
+    <!-- Application Script -->
+    <script type="module" src="js/main.js"></script>
 </body>
 </html>
