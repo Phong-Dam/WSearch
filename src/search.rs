@@ -1,8 +1,9 @@
 //! Search logic and fuzzy matching
 
-use crate::types::{FileInfo, ScoredFile, AppIndex, SearchResponse};
+use crate::types::{BenchmarkMetrics, FileInfo, ScoredFile, AppIndex, SearchResponse};
 use rayon::prelude::*;
 use tauri::State;
+use std::time::Instant;
 
 /// Fuzzy matching algorithm that returns a score
 /// Higher score = better match
@@ -70,16 +71,19 @@ pub async fn search_files(
     use_fuzzy: bool,
     state: State<'_, AppIndex>,
 ) -> Result<SearchResponse, String> {
+    let search_start = Instant::now();
+
     if query.is_empty() {
         return Ok(SearchResponse { results: vec![], search_id });
     }
-    
+
     let q = query.to_lowercase();
     const LIMIT: usize = 100;
     const MAX_SUBSTRING_SCAN: usize = 10_000;
 
     let files_read = state.files.read().map_err(|e| e.to_string())?;
-    if files_read.is_empty() {
+    let file_count = files_read.len();
+    if file_count == 0 {
         return Ok(SearchResponse { results: vec![], search_id });
     }
 
@@ -99,6 +103,8 @@ pub async fn search_files(
         }
     }
 
+    let mut fuzzy_time_ms: u64 = 0;
+
     if results.len() < LIMIT {
         let end_of_prefix = start_idx + results.len();
         let remaining_needed = LIMIT - results.len();
@@ -117,10 +123,10 @@ pub async fn search_files(
                     .collect::<Vec<_>>()
             })
             .collect();
-        
+
         substring_matches.truncate(remaining_needed);
         results.append(&mut substring_matches);
-        
+
         // Also scan before prefix range if still not enough
         if results.len() < LIMIT && start_idx > 0 {
             let remaining_needed = LIMIT - results.len();
@@ -135,17 +141,18 @@ pub async fn search_files(
                         .collect::<Vec<_>>()
                 })
                 .collect();
-            
+
             prefix_matches.truncate(remaining_needed);
             results.append(&mut prefix_matches);
         }
-        
+
         // Fuzzy matching fallback
         if use_fuzzy && results.len() < LIMIT && q.len() >= 2 {
             let remaining_needed = LIMIT - results.len();
-            let existing_paths: std::collections::HashSet<String> = 
+            let existing_paths: std::collections::HashSet<String> =
                 results.iter().map(|f| f.path.clone()).collect();
-            
+
+            let fuzzy_start = Instant::now();
             let fuzzy_chunk_size = 10_000;
             let mut scored_matches: Vec<ScoredFile> = files_read
                 .par_chunks(fuzzy_chunk_size)
@@ -161,10 +168,11 @@ pub async fn search_files(
                         .collect::<Vec<_>>()
                 })
                 .collect();
-            
+
             scored_matches.par_sort_unstable_by(|a, b| b.score.cmp(&a.score));
             scored_matches.truncate(remaining_needed);
             results.extend(scored_matches.into_iter().map(|sf| sf.file));
+            fuzzy_time_ms = fuzzy_start.elapsed().as_millis() as u64;
         }
     }
 
@@ -174,6 +182,20 @@ pub async fn search_files(
         results.sort_unstable_by(|a, b| b.open_count.cmp(&a.open_count));
     }
     results.truncate(LIMIT);
+
+    // Update benchmark metrics
+    let total_elapsed = search_start.elapsed().as_millis() as u64;
+    if let Ok(mut metrics) = state.metrics.lock() {
+        metrics.search_count += 1;
+        metrics.total_search_time_ms += total_elapsed;
+        metrics.last_search_time_ms = total_elapsed;
+        metrics.avg_search_time_ms = metrics.total_search_time_ms / metrics.search_count.max(1);
+        metrics.indexed_file_count = file_count;
+        if fuzzy_time_ms > 0 {
+            metrics.fuzzy_search_count += 1;
+            metrics.total_fuzzy_time_ms += fuzzy_time_ms;
+        }
+    }
 
     Ok(SearchResponse { results, search_id })
 }
@@ -208,4 +230,17 @@ pub async fn get_index_status(state: State<'_, AppIndex>) -> Result<(usize, bool
 pub async fn cancel_indexing(state: State<'_, AppIndex>) -> Result<(), String> {
     state.cancel_index.store(true, std::sync::atomic::Ordering::SeqCst);
     Ok(())
+}
+
+#[tauri::command]
+pub async fn get_benchmark_metrics(state: State<'_, AppIndex>) -> Result<BenchmarkMetrics, String> {
+    let metrics = state.metrics.lock().map_err(|e| e.to_string())?;
+    let file_count = state.files.read()
+        .map(|f| f.len())
+        .unwrap_or(0);
+
+    let mut result = (*metrics).clone();
+    result.indexed_file_count = file_count;
+
+    Ok(result)
 }

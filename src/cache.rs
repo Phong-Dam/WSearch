@@ -1,6 +1,6 @@
 //! File index cache management
 
-use crate::types::{FileInfo, IGNORE_DIRS};
+use crate::types::{FileInfo, IGNORE_DIRS, BenchmarkMetrics};
 use flate2::read::GzDecoder;
 use flate2::write::GzEncoder;
 use flate2::Compression;
@@ -12,9 +12,9 @@ use std::io::Read;
 use std::io::Write;
 use std::path::PathBuf;
 use std::sync::atomic::Ordering;
-use std::sync::{mpsc, Arc, RwLock};
+use std::sync::{mpsc, Arc, RwLock, Mutex};
 use std::thread;
-use std::time::Duration;
+use std::time::{Duration, Instant};
 use sysinfo::Disks;
 
 /// Get cache file path
@@ -65,8 +65,12 @@ pub fn load_cache(
     cache_path: &PathBuf,
     files: Arc<RwLock<Vec<FileInfo>>>,
     path_map: Arc<RwLock<std::collections::HashMap<String, usize>>>,
+    metrics: Option<Arc<Mutex<BenchmarkMetrics>>>,
 ) {
+    let load_start = Instant::now();
+
     if let Ok(f) = File::open(cache_path) {
+        let cache_size = f.metadata().map(|m| m.len()).unwrap_or(0);
         let mut decoder = GzDecoder::new(f);
         let mut buf = Vec::new();
         if decoder.read_to_end(&mut buf).is_ok() {
@@ -78,11 +82,20 @@ pub fn load_cache(
                     fi.name_lowercase = fi.name.to_lowercase();
                     map.insert(fi.path.clone(), i);
                 }
-                
+
                 if let Ok(mut files_w) = files.write() {
                     *files_w = cached;
                     if let Ok(mut map_w) = path_map.write() {
                         *map_w = map;
+                    }
+                }
+
+                // Update metrics
+                if let Some(m) = metrics {
+                    if let Ok(mut metrics) = m.lock() {
+                        metrics.last_cache_load_ms = load_start.elapsed().as_millis() as u64;
+                        metrics.cache_size_bytes = cache_size;
+                        metrics.indexed_file_count = len;
                     }
                 }
             }

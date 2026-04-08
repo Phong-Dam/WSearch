@@ -126,8 +126,8 @@ class KeyboardHandler {
         const results = state.get('results');
         const selectedIndex = state.get('selectedIndex');
         const file = results[selectedIndex];
-        
-        if (!file) return;
+
+        if (!file?.path) return;
 
         try {
             await window.__TAURI__.core.invoke('open_path', { path: file.path });

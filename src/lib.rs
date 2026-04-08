@@ -9,19 +9,20 @@ mod types;
 mod watcher;
 
 use std::collections::HashMap;
-use std::sync::{atomic::{AtomicBool, Ordering}, mpsc, Arc, RwLock};
+use std::sync::{atomic::{AtomicBool, Ordering}, mpsc, Arc, RwLock, Mutex};
 use std::thread;
 use sysinfo::Disks;
 use tauri::{generate_context, generate_handler, Manager};
 use tauri_plugin_global_shortcut::{GlobalShortcutExt, ShortcutState};
 
-use types::AppIndex;
+use types::{AppIndex, BenchmarkMetrics};
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     let files = Arc::new(RwLock::new(Vec::with_capacity(500_000)));
     let path_map = Arc::new(RwLock::new(HashMap::with_capacity(500_000)));
     let icon_cache = Arc::new(RwLock::new(HashMap::new()));
+    let metrics = Arc::new(Mutex::new(BenchmarkMetrics::default()));
     let (save_tx, save_rx) = mpsc::channel::<()>();
     let cancel_index = Arc::new(AtomicBool::new(false));
     let is_loading_cache = Arc::new(AtomicBool::new(true));
@@ -35,6 +36,7 @@ pub fn run() {
     let cancel_setup = cancel_index.clone();
     let indexing_setup = is_indexing.clone();
     let is_loading_setup = is_loading_cache.clone();
+    let metrics_setup = metrics.clone();
 
     tauri::Builder::default()
         .plugin(tauri_plugin_global_shortcut::Builder::new().build())
@@ -75,7 +77,7 @@ pub fn run() {
             
             thread::spawn(move || {
                 // Load cached index
-                let _ = cache::load_cache(&cache_p, i_files.clone(), i_map.clone());
+                let _ = cache::load_cache(&cache_p, i_files.clone(), i_map.clone(), Some(metrics_setup));
                 // Mark cache loaded, now start scanning
                 i_loading.store(false, Ordering::SeqCst);
                 // Scan and index new files
@@ -117,12 +119,13 @@ pub fn run() {
 
             Ok(())
         })
-        .manage(AppIndex { files, path_map, save_tx, cancel_index, is_loading_cache: is_loading_cache.clone(), is_indexing, icon_cache })
+        .manage(AppIndex { files, path_map, save_tx, cancel_index, is_loading_cache: is_loading_cache.clone(), is_indexing, icon_cache, metrics })
         .invoke_handler(generate_handler![
             search::search_files,
             search::get_index_status,
             search::record_open,
             search::cancel_indexing,
+            search::get_benchmark_metrics,
             shell::open_path,
             shell::show_in_folder,
             icon::get_file_icon

@@ -146,9 +146,11 @@ class LazyIconLoader {
 
         requestAnimationFrame(() => {
             const viewportBottom = viewportTop + viewportHeight;
-            
+
             for (let i = startIndex; i < endIndex && i < files.length; i++) {
                 const file = files[i];
+                if (!file?.path) continue;
+
                 const rowTop = i * rowHeight;
                 const rowBottom = rowTop + rowHeight;
 

@@ -14,6 +14,7 @@ export const CONFIG = Object.freeze({
     RENDER_DELAY_MS: 50,
     INDEX_CHECK_INTERVAL_MS: 500,
     LOADING_SCREEN_DELAY_MS: 1000,
+    BENCHMARK_INTERVAL_MS: 1000,
 
     // Column widths
     COLUMN_ICON_WIDTH: 32,

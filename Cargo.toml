@@ -41,3 +41,10 @@ windows = { version = "0.61.3", features = [
     "Win32_Storage_FileSystem"
 ] }
 base64 = "0.22"
+
+[dev-dependencies]
+criterion = "0.5"
+
+[[bench]]
+name = "search_bench"
+harness = false

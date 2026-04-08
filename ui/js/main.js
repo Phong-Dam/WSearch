@@ -9,6 +9,7 @@ import { keyboardHandler } from './keyboard.js';
 import { contextMenu } from './context.js';
 import { toastManager } from './toast.js';
 import { lazyIconLoader } from './icons.js';
+import { benchmarkDisplay } from './bench.js';
 
 /**
  * Application class
@@ -47,7 +48,10 @@ class WSearchApp {
         
         // Initialize context menu
         contextMenu.init(document.getElementById('results'));
-        
+
+        // Initialize benchmark display
+        benchmarkDisplay.init();
+
         // Load fuzzy preference from localStorage
         this._loadPreferences();
         
@@ -114,8 +118,8 @@ class WSearchApp {
 
             const index = parseInt(row.dataset.index);
             const file = state.get('results')[index];
-            
-            if (file) {
+
+            if (file?.path) {
                 window.__TAURI__.core.invoke('open_path', { path: file.path });
                 window.__TAURI__.core.invoke('record_open', { path: file.path });
             }
@@ -127,12 +131,20 @@ class WSearchApp {
             fuzzyCheckbox.addEventListener('change', (e) => {
                 state.set({ useFuzzy: e.target.checked });
                 localStorage.setItem('useFuzzy', e.target.checked);
-                
+
                 // Re-search if there's a query
                 const query = state.get('query');
                 if (query) {
                     searchManager.init(document.getElementById('search'));
                 }
+            });
+        }
+
+        // Benchmark toggle
+        const benchmarkToggle = document.getElementById('benchmarkToggle');
+        if (benchmarkToggle) {
+            benchmarkToggle.addEventListener('click', () => {
+                benchmarkDisplay.toggle();
             });
         }
     }

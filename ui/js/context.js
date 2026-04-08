@@ -123,7 +123,7 @@ class ContextMenuManager {
      * @private
      */
     async _openFile() {
-        if (!this._target) return;
+        if (!this._target?.path) return;
 
         if (!window.__TAURI__) {
             showToast('Lỗi: Tauri không khả dụng', 'error');
@@ -133,7 +133,7 @@ class ContextMenuManager {
         try {
             await window.__TAURI__.core.invoke('open_path', { path: this._target.path });
             await window.__TAURI__.core.invoke('record_open', { path: this._target.path });
-            
+
             // Select and open
             state.set({ selectedIndex: this._target.index });
             renderer.reset();
@@ -148,7 +148,7 @@ class ContextMenuManager {
             const errorMsg = error?.message || error?.toString() || String(error);
             showToast('Lỗi mở file: ' + errorMsg.substring(0, 60), 'error');
         }
-        
+
         this._hide();
     }
 
@@ -157,7 +157,7 @@ class ContextMenuManager {
      * @private
      */
     async _showInFolder() {
-        if (!this._target) return;
+        if (!this._target?.path) return;
 
         try {
             await window.__TAURI__.core.invoke('show_in_folder', { path: this._target.path });
@@ -165,7 +165,7 @@ class ContextMenuManager {
             console.error('Failed to show in folder:', error);
             showToast('Failed to show in folder', 'error');
         }
-        
+
         this._hide();
     }
 
@@ -174,7 +174,7 @@ class ContextMenuManager {
      * @private
      */
     async _copyPath() {
-        if (!this._target) return;
+        if (!this._target?.path) return;
 
         try {
             await navigator.clipboard.writeText(this._target.path);
@@ -183,7 +183,7 @@ class ContextMenuManager {
             console.error('Failed to copy path:', error);
             showToast('Failed to copy path', 'error');
         }
-        
+
         this._hide();
     }
 
@@ -192,7 +192,7 @@ class ContextMenuManager {
      * @private
      */
     async _copyName() {
-        if (!this._target) return;
+        if (!this._target?.name) return;
 
         try {
             await navigator.clipboard.writeText(this._target.name);
@@ -201,7 +201,7 @@ class ContextMenuManager {
             console.error('Failed to copy name:', error);
             showToast('Failed to copy name', 'error');
         }
-        
+
         this._hide();
     }
 }
